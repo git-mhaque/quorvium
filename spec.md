@@ -29,3 +29,4 @@ Quorvium is a collaborative whiteboard for distributed teams to capture and orga
 - Add board-level permissions (owner, co-owner, read-only guests).
 - Replace file-based storage with a managed database.
 - Implement token refresh endpoint and Google API integrations (Drive export, Calendar summaries, etc.).
+- Extend OAuth flow with a refresh endpoint that reads secure cookies and rotates access tokens server-side.
