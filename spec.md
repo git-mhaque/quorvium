@@ -11,6 +11,7 @@ Quorvium is a collaborative whiteboard for distributed teams to capture and orga
 - **Creation:** Authenticated users provide a name and receive a shareable `/boards/:id` URL. Owner metadata (id, name, email, avatar) is persisted.
 - **Joining:** Participants can join via full URL or board ID. Access does not require authentication.
 - **Persistence:** Boards and sticky notes are stored in `server/data/boards.json` (developer machines only; swap for durable storage in production).
+- **Management:** Signed-in owners see a "My Boards" table listing their boards with created/updated timestamps, direct board links, one-click copy, delete controls, and a quick "Create board" action that captures the board name in-place.
 
 ## Collaboration Canvas
 - Sticky notes support free positioning, color selection, and live updates. Socket.IO broadcasts create/update/delete events with optimistic UI rollback on failure.

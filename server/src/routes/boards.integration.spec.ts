@@ -172,4 +172,48 @@ describe('Boards API and socket collaboration', () => {
   it('rejects board creation without an authenticated owner', async () => {
     await agent.post('/api/boards').send({ name: 'Missing Owner' }).expect(400);
   });
+
+  it('lists boards for an owner and supports deletion', async () => {
+    const owner = { id: 'owner-user', name: 'Owner User', email: 'owner@example.com' };
+    const otherOwner = { id: 'another-user', name: 'Another User', email: 'other@example.com' };
+
+    const createFirst = await agent
+      .post('/api/boards')
+      .send({
+        name: 'First Board',
+        owner
+      })
+      .expect(201);
+
+    const createSecond = await agent
+      .post('/api/boards')
+      .send({
+        name: 'Second Board',
+        owner
+      })
+      .expect(201);
+
+    await agent
+      .post('/api/boards')
+      .send({
+        name: 'Unrelated Board',
+        owner: otherOwner
+      })
+      .expect(201);
+
+    const listResponse = await agent.get('/api/boards').query({ ownerId: owner.id }).expect(200);
+    expect(Array.isArray(listResponse.body.boards)).toBe(true);
+    expect(listResponse.body.boards).toHaveLength(2);
+    const ids = listResponse.body.boards.map((b: { id: string }) => b.id);
+    expect(ids).toEqual(
+      expect.arrayContaining([createFirst.body.board.id, createSecond.body.board.id])
+    );
+
+    await agent.delete(`/api/boards/${createFirst.body.board.id}`).expect(204);
+    await agent.delete('/api/boards/non-existent').expect(404);
+
+    const listAfterDelete = await agent.get('/api/boards').query({ ownerId: owner.id }).expect(200);
+    expect(listAfterDelete.body.boards).toHaveLength(1);
+    expect(listAfterDelete.body.boards[0].id).toBe(createSecond.body.board.id);
+  });
 });

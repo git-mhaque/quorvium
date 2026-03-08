@@ -19,6 +19,17 @@ export async function fetchBoard(boardId: string) {
   return data.board;
 }
 
+export async function fetchBoardsByOwner(ownerId: string) {
+  const { data } = await api.get<{ boards: Board[] }>('/api/boards', {
+    params: { ownerId }
+  });
+  return data.boards;
+}
+
+export async function deleteBoard(boardId: string) {
+  await api.delete(`/api/boards/${boardId}`);
+}
+
 export async function verifyGoogleAuth(payload: GoogleAuthPayload) {
   const { data } = await api.post<{ user: AuthUserResponse; tokens?: GoogleAuthTokens }>(
     '/api/auth/verify',

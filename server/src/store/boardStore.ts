@@ -88,6 +88,26 @@ export class BoardStore {
     return this.boards.get(boardId);
   }
 
+  async listBoardsByOwner(ownerId: string): Promise<Board[]> {
+    await this.init();
+    return Array.from(this.boards.values())
+      .filter((board) => board.owner?.id === ownerId)
+      .sort(
+        (a, b) =>
+          new Date(b.updatedAt ?? b.createdAt).getTime() -
+          new Date(a.updatedAt ?? a.createdAt).getTime()
+      );
+  }
+
+  async deleteBoard(boardId: string): Promise<boolean> {
+    await this.init();
+    const existed = this.boards.delete(boardId);
+    if (existed) {
+      await this.persist();
+    }
+    return existed;
+  }
+
   async createNote(input: CreateStickyNoteInput): Promise<StickyNote> {
     const board = await this.getBoard(input.boardId);
     if (!board) {
