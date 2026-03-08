@@ -27,7 +27,7 @@ Populate environment values before starting the app:
 |                   | `VITE_GOOGLE_CLIENT_ID`      | same as server                   |
 |                   | `VITE_GOOGLE_REDIRECT_URI`   | `http://localhost:5173/`         |
 
-Only Google-authenticated users can create boards. Guests may still join existing boards without signing in.
+Only Google-authenticated users can create boards. Visitors may still join existing boards without signing in, but they collaborate anonymously.
 
 ## Developing locally
 

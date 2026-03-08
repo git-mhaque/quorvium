@@ -4,8 +4,8 @@
 Quorvium is a collaborative whiteboard for distributed teams to capture and organize ideas in real time. The application consists of a React/Vite client and an Express + Socket.IO backend, with TypeScript across the stack.
 
 ## Authentication & Access
-- **Google Sign-In (OAuth 2.0):** Only Google-authenticated users can create boards. Authorization codes are exchanged server-side and stored in secure HTTP-only cookies. Guests may join existing boards once invited.
-- **Guest Mode:** Users can choose a display name and join boards without Google sign-in, but they cannot create new boards.
+- **Google Sign-In (OAuth 2.0):** Only Google-authenticated users can create boards. Authorization codes are exchanged server-side and stored in secure HTTP-only cookies.
+- **Shared Access Links:** Visitors without Google accounts can open a board URL shared by teammates, but they collaborate anonymously and cannot create new boards.
 
 ## Board Lifecycle
 - **Creation:** Authenticated users provide a name and receive a shareable `/boards/:id` URL. Owner metadata (id, name, email, avatar) is persisted.

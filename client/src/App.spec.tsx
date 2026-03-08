@@ -18,7 +18,7 @@ describe('App', () => {
     expect(screen.getByText(/Welcome to Quorvium/i)).toBeInTheDocument();
   });
 
-  it('disables board creation until a user signs in', () => {
+  it('hides board creation until a user signs in', () => {
     render(
       <BrowserRouter>
         <AuthProvider>
@@ -27,9 +27,9 @@ describe('App', () => {
       </BrowserRouter>
     );
 
-    expect(screen.getByRole('button', { name: /create board/i })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: /create board/i })).not.toBeInTheDocument();
     expect(
-      screen.getByText(/Sign in with Google to unlock board creation/i)
+      screen.getByText(/Use your Google account to create new boards/i)
     ).toBeInTheDocument();
   });
 });

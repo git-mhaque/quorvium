@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGoogleLogin } from '@react-oauth/google';
 
@@ -8,12 +8,17 @@ import { useAuth } from '../state/auth';
 
 export function HomePage() {
   const navigate = useNavigate();
-  const { user, signInAsGuest, signInWithGoogle, signOut, isGoogleConfigured } = useAuth();
+  const { user, signInWithGoogle, signOut, isGoogleConfigured } = useAuth();
   const [boardName, setBoardName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [joinInput, setJoinInput] = useState('');
   const isAuthenticatedCreator = Boolean(user && user.isGuest !== true);
+  const [avatarErrored, setAvatarErrored] = useState(false);
+
+  useEffect(() => {
+    setAvatarErrored(false);
+  }, [user?.avatarUrl]);
 
   const handleCreateBoard = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -63,13 +68,6 @@ export function HomePage() {
     }
   };
 
-  const handleGuest = () => {
-    const name = window.prompt('How should other collaborators see you?', 'Guest');
-    if (name !== null) {
-      signInAsGuest(name || 'Guest');
-    }
-  };
-
   return (
     <div
       style={{
@@ -92,37 +90,120 @@ export function HomePage() {
         </header>
 
         <section className="card" style={{ marginBottom: '1.5rem' }}>
-          <form onSubmit={handleCreateBoard}>
-            <label style={{ display: 'block', marginBottom: '0.75rem' }}>
-              <span style={{ display: 'block', marginBottom: '0.4rem' }}>Board name</span>
-              <input
-                className="input"
-                placeholder="e.g. Launch Planning"
-                value={boardName}
-                onChange={(event) => {
-                  setBoardName(event.target.value);
-                  setError(null);
-                }}
-              />
-            </label>
-            <button
-              className="btn btn-primary"
-              type="submit"
-              disabled={isCreating || !isAuthenticatedCreator}
-              style={{ width: '100%' }}
+          {user ? (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '1rem',
+                flexWrap: 'wrap'
+              }}
             >
-              {isCreating ? 'Creating…' : 'Create board'}
-            </button>
-          </form>
-          {!isAuthenticatedCreator && (
-            <p style={{ marginTop: '0.75rem', fontSize: '0.9rem', color: 'rgba(226,232,240,0.75)' }}>
-              Sign in with Google to unlock board creation. Guests can still join existing boards.
-            </p>
-          )}
-          {error && (
-            <p style={{ color: '#f87171', marginTop: '0.75rem', fontSize: '0.9rem' }}>{error}</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
+                {user.avatarUrl && !avatarErrored ? (
+                  <img
+                    src={user.avatarUrl}
+                    alt={user.name ?? 'Signed in user'}
+                    onError={() => setAvatarErrored(true)}
+                    style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover' }}
+                  />
+                ) : (
+                  <div
+                    aria-hidden
+                    style={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: '50%',
+                      background: 'rgba(148,163,184,0.25)',
+                      display: 'grid',
+                      placeItems: 'center',
+                      fontWeight: 600
+                    }}
+                  >
+                    {(user.name ?? '?').charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div style={{ minWidth: 0 }}>
+                  <p style={{ margin: 0, fontSize: '0.85rem', color: 'rgba(226,232,240,0.75)' }}>
+                    Signed in as
+                  </p>
+                  <p style={{ margin: 0, fontWeight: 600 }}>{user.name}</p>
+                  {user.email && (
+                    <p style={{ margin: 0, fontSize: '0.85rem', color: 'rgba(226,232,240,0.75)' }}>
+                      {user.email}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <button className="btn btn-secondary" type="button" onClick={signOut}>
+                Sign out
+              </button>
+            </div>
+          ) : (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '1rem',
+                flexWrap: 'wrap'
+              }}
+            >
+              <div style={{ flex: '1 1 auto', minWidth: 0 }}>
+                <h2 style={{ margin: '0 0 0.25rem', fontSize: '1.1rem' }}>Sign in with Google</h2>
+                <p style={{ margin: 0, color: 'rgba(226,232,240,0.75)' }}>
+                  Use your Google account to create new boards and collaborate with your team. If a
+                  teammate shares a link, you can still join without signing in.
+                </p>
+              </div>
+              {isGoogleConfigured ? (
+                <GoogleSignInButton
+                  onCode={async (code) => {
+                    try {
+                      await signInWithGoogle({ code });
+                      setError(null);
+                    } catch (err) {
+                      setError(
+                        err instanceof Error ? err.message : 'Google sign-in failed. Try again.'
+                      );
+                    }
+                  }}
+                  onError={() => setError('Google sign-in failed. Try again.')}
+                />
+              ) : (
+                <p style={{ color: 'rgba(226,232,240,0.75)', margin: 0 }}>
+                  Add <code>VITE_GOOGLE_CLIENT_ID</code> to enable Google sign-in.
+                </p>
+              )}
+            </div>
           )}
         </section>
+
+        {isAuthenticatedCreator && (
+          <section className="card" style={{ marginBottom: '1.5rem' }}>
+            <form onSubmit={handleCreateBoard}>
+              <label style={{ display: 'block', marginBottom: '0.75rem' }}>
+                <span style={{ display: 'block', marginBottom: '0.4rem' }}>Board name</span>
+                <input
+                  className="input"
+                  placeholder="e.g. Launch Planning"
+                  value={boardName}
+                  onChange={(event) => {
+                    setBoardName(event.target.value);
+                    setError(null);
+                  }}
+                />
+              </label>
+              <button className="btn btn-primary" type="submit" disabled={isCreating} style={{ width: '100%' }}>
+                {isCreating ? 'Creating…' : 'Create board'}
+              </button>
+            </form>
+            {error && (
+              <p style={{ color: '#f87171', marginTop: '0.75rem', fontSize: '0.9rem' }}>{error}</p>
+            )}
+          </section>
+        )}
 
         <section className="card" style={{ marginBottom: '1.5rem' }}>
           <h2 style={{ marginTop: 0, fontSize: '1.1rem' }}>Join an existing board</h2>
@@ -143,44 +224,6 @@ export function HomePage() {
               Join board
             </button>
           </form>
-        </section>
-
-        <section className="card">
-          <h2 style={{ marginTop: 0, fontSize: '1.1rem' }}>
-            {user ? `Signed in as ${user.name}` : 'Sign in to create boards'}
-          </h2>
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-            {user ? (
-              <button className="btn btn-secondary" onClick={signOut}>
-                Sign out
-              </button>
-            ) : (
-              <>
-                {isGoogleConfigured ? (
-                  <GoogleSignInButton
-                    onCode={async (code) => {
-                      try {
-                        await signInWithGoogle({ code });
-                        setError(null);
-                      } catch (err) {
-                        setError(
-                          err instanceof Error ? err.message : 'Google sign-in failed. Try again.'
-                        );
-                      }
-                    }}
-                    onError={() => setError('Google sign-in failed. Try again.')}
-                  />
-                ) : (
-                  <p style={{ color: 'rgba(226,232,240,0.75)' }}>
-                    Add <code>VITE_GOOGLE_CLIENT_ID</code> to enable Google sign-in.
-                  </p>
-                )}
-                <button className="btn btn-secondary" type="button" onClick={handleGuest}>
-                  Continue as guest
-                </button>
-              </>
-            )}
-          </div>
         </section>
       </div>
     </div>
@@ -209,7 +252,7 @@ function GoogleSignInButton({ onCode, onError }: GoogleSignInButtonProps) {
   });
 
   return (
-    <button className="btn btn-secondary" type="button" onClick={() => login()}>
+    <button className="btn btn-primary" type="button" onClick={() => login()}>
       Sign in with Google
     </button>
   );
