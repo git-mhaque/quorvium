@@ -1,0 +1,175 @@
+import { mkdtempSync, rmSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
+
+import cors from 'cors';
+import express from 'express';
+import { createServer } from 'http';
+import { AddressInfo } from 'net';
+import request from 'supertest';
+import { ZodError } from 'zod';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+
+// Set up isolated storage for the board store before loading application modules.
+const tempDataDir = mkdtempSync(join(tmpdir(), 'quorvium-int-'));
+process.env.DATA_DIR = tempDataDir;
+process.env.CLIENT_ORIGIN = 'http://localhost:5173';
+
+const { boardsRouter } = await import('../routes/boards.js');
+const { authRouter } = await import('../routes/auth.js');
+const { createSocketServer } = await import('../socket.js');
+const { boardStore } = await import('../store/boardStore.js');
+const { io: createClient } = await import('socket.io-client');
+
+describe('Boards API and socket collaboration', () => {
+  const app = express();
+  app.use(
+    cors({
+      origin: process.env.CLIENT_ORIGIN,
+      credentials: true
+    })
+  );
+  app.use(express.json());
+  app.use('/api/boards', boardsRouter);
+  app.use('/api/auth', authRouter);
+  app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    if (err instanceof ZodError) {
+      return res.status(400).json({ error: 'Invalid request payload', details: err.flatten() });
+    }
+    const message = err instanceof Error ? err.message : 'Unexpected error';
+    return res.status(500).json({ error: message });
+  });
+
+  const agent = request(app);
+
+  let httpServer: ReturnType<typeof createServer>;
+  let port: number;
+
+  beforeAll(async () => {
+    httpServer = createServer(app);
+    createSocketServer(httpServer);
+    await new Promise<void>((resolve) => {
+      httpServer.listen(0, () => {
+        port = (httpServer.address() as AddressInfo).port;
+        resolve();
+      });
+    });
+  });
+
+  afterAll(async () => {
+    await new Promise<void>((resolve) => {
+      httpServer.close(() => resolve());
+    });
+    rmSync(tempDataDir, { recursive: true, force: true });
+  });
+
+  it('creates a board and syncs notes across participants', async () => {
+    const createResponse = await agent
+      .post('/api/boards')
+      .send({
+        name: 'Integration Board',
+        owner: { id: 'auth-user', name: 'Auth User', email: 'auth@example.com' }
+      })
+      .expect(201);
+
+    const { board, shareUrl } = createResponse.body;
+    expect(board).toBeDefined();
+    expect(board.id).toMatch(
+      /^[0-9a-fA-F-]{36}$/
+    );
+    expect(board.owner).toMatchObject({
+      id: 'auth-user',
+      name: 'Auth User',
+      email: 'auth@example.com'
+    });
+    expect(shareUrl).toContain(board.id);
+
+    const clientA = createClient(`http://localhost:${port}`, {
+      transports: ['websocket'],
+      forceNew: true
+    });
+    const clientB = createClient(`http://localhost:${port}`, {
+      transports: ['websocket'],
+      forceNew: true
+    });
+
+    try {
+      const boardState = await new Promise<{ board: typeof board }>((resolve, reject) => {
+        clientA.once('board:state', resolve);
+        clientA.emit(
+          'board:join',
+          {
+            boardId: board.id,
+            user: { id: 'tester-a', name: 'Tester A' }
+          },
+          (ack: { ok: boolean; error?: string }) => {
+            if (!ack.ok) {
+              reject(new Error(ack.error ?? 'Join failed'));
+            }
+          }
+        );
+      });
+
+      expect(boardState.board.id).toBe(board.id);
+
+      const userJoined = new Promise((resolve) => {
+        clientA.once('board:user_joined', resolve);
+      });
+
+      await new Promise<void>((resolve, reject) => {
+        clientB.emit(
+          'board:join',
+          {
+            boardId: board.id,
+            user: { id: 'tester-b', name: 'Tester B' }
+          },
+          (ack: { ok: boolean; error?: string }) => {
+            if (!ack.ok) {
+              reject(new Error(ack.error ?? 'Join failed'));
+              return;
+            }
+            resolve();
+          }
+        );
+      });
+
+      await userJoined;
+
+      const noteCreated = new Promise<{ boardId: string; note: (typeof board)['notes'][string] }>(
+        (resolve, reject) => {
+          clientB.once('note:created', resolve);
+          clientA.emit(
+            'note:create',
+            {
+              boardId: board.id,
+              note: {
+                body: 'Integration test note',
+                x: 200,
+                y: 120,
+                color: '#fde68a'
+              }
+            },
+            (ack: { ok: boolean; error?: string }) => {
+              if (!ack.ok) {
+                reject(new Error(ack.error ?? 'Note creation failed'));
+              }
+            }
+          );
+        }
+      );
+
+      const payload = await noteCreated;
+      expect(payload.boardId).toBe(board.id);
+      expect(payload.note.body).toBe('Integration test note');
+
+      const persisted = await boardStore.getBoard(board.id);
+      expect(persisted?.notes).toHaveProperty(payload.note.id);
+    } finally {
+      clientA.disconnect();
+      clientB.disconnect();
+    }
+  });
+  it('rejects board creation without an authenticated owner', async () => {
+    await agent.post('/api/boards').send({ name: 'Missing Owner' }).expect(400);
+  });
+});

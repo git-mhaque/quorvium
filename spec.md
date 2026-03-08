@@ -1,0 +1,31 @@
+# Quorvium Product Specification
+
+## Overview
+Quorvium is a collaborative whiteboard for distributed teams to capture and organize ideas in real time. The application consists of a React/Vite client and an Express + Socket.IO backend, with TypeScript across the stack.
+
+## Authentication & Access
+- **Google Sign-In (OAuth 2.0):** Only Google-authenticated users can create boards. Authorization codes are exchanged server-side and stored in secure HTTP-only cookies. Guests may join existing boards once invited.
+- **Guest Mode:** Users can choose a display name and join boards without Google sign-in, but they cannot create new boards.
+
+## Board Lifecycle
+- **Creation:** Authenticated users provide a name and receive a shareable `/boards/:id` URL. Owner metadata (id, name, email, avatar) is persisted.
+- **Joining:** Participants can join via full URL or board ID. Access does not require authentication.
+- **Persistence:** Boards and sticky notes are stored in `server/data/boards.json` (developer machines only; swap for durable storage in production).
+
+## Collaboration Canvas
+- Sticky notes support free positioning, color selection, and live updates. Socket.IO broadcasts create/update/delete events with optimistic UI rollback on failure.
+- Presence is indicated via lightweight participant join notifications.
+
+## Security & Tokens
+- OAuth refresh and access tokens are written to `quorvium_google_refresh` and `quorvium_google_access` cookies (secure, HTTP-only, `SameSite=Lax`). Add a token-refresh endpoint before calling downstream Google APIs.
+- Environment variables: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`, `CLIENT_ORIGIN`, `VITE_GOOGLE_CLIENT_ID`, `VITE_GOOGLE_REDIRECT_URI`, `VITE_API_BASE_URL`.
+
+## Testing & Tooling
+- `npm test --workspace=server` runs integration tests that exercise REST + websockets.
+- `npm test --workspace=client` covers landing page auth gating.
+- ESLint/Prettier enforcement via `npm run lint` / `npm run format`.
+
+## Roadmap Considerations
+- Add board-level permissions (owner, co-owner, read-only guests).
+- Replace file-based storage with a managed database.
+- Implement token refresh endpoint and Google API integrations (Drive export, Calendar summaries, etc.).
