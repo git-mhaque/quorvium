@@ -25,6 +25,7 @@ Quorvium uses GitHub environments to isolate staging and production deployment c
 | `VITE_API_BASE_URL` | API base URL injected into client build. | Cloud Run URL | Example: `https://quorvium-api-staging-a4nw.run.app`. |
 | `VITE_GOOGLE_CLIENT_ID` | Client-side OAuth ID. | Same as `GOOGLE_CLIENT_ID` unless split. | Optional if staging UI uses the same OAuth app. |
 | `VITE_GOOGLE_REDIRECT_URI` | Client redirect URL. | Vite environment config | Typically matches `GOOGLE_REDIRECT_URI`. |
+| `STAGING_BUCKET` | Google Cloud Storage bucket URI for static client hosting. | Cloud Storage (`gs://...`) | Example: `gs://staging-quorvium-client`. |
 
 ## Production Environment (`production`)
 

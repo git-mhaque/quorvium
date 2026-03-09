@@ -28,7 +28,7 @@ This directory contains Terraform configuration that provisions the minimal prod
    gsutil mb -p quorvium -l australia-southeast1 gs://staging-quorvium-client
    gsutil web set -m index.html -e 404.html gs://staging-quorvium-client
    ```
-   Upload the `client/dist` build with `gsutil -m rsync -r client/dist gs://staging-quorvium-client`.
+   Upload the `client/dist` build with `gsutil -m rsync -r client/dist gs://staging-quorvium-client`. The CI workflow expects a GitHub environment secret named `STAGING_BUCKET` containing this bucket URI (`gs://staging-quorvium-client`).
 6. Initialize the workspace:
    ```sh
    terraform init

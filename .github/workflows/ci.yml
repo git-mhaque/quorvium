@@ -89,3 +89,51 @@ jobs:
           IMAGE_DIGEST: ${{ steps.push.outputs.image_digest }}
         run: |
           printf 'Image pushed: %s\nDigest: %s\n' "${IMAGE_URI}" "${IMAGE_DIGEST}"
+
+  deploy-client-staging:
+    name: Deploy Client (staging)
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+    environment: staging
+    env:
+      VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+      VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+      VITE_GOOGLE_REDIRECT_URI: ${{ secrets.VITE_GOOGLE_REDIRECT_URI }}
+      STAGING_BUCKET: ${{ secrets.STAGING_BUCKET }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Build client bundle
+        run: npm run build --workspace=client
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Install gcloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Install gsutil
+        run: gcloud components install gsutil --quiet
+
+      - name: Sync bundle to staging bucket
+        run: |
+          if [ -z "${STAGING_BUCKET}" ]; then
+            echo "STAGING_BUCKET secret is not set" >&2
+            exit 1
+          fi
+          gsutil -m rsync -d -r client/dist "${STAGING_BUCKET}"
