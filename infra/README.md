@@ -39,7 +39,7 @@ This directory contains Terraform configuration that provisions the minimal prod
    gsutil uniformbucketlevelaccess set on gs://staging-quorvium-client
    gsutil iam ch allUsers:objectViewer gs://staging-quorvium-client
    ```
-   Upload the `client/dist` build with `gsutil -m rsync -r client/dist gs://staging-quorvium-client`. The CI workflow expects GitHub environment secrets named `STAGING_BUCKET` (`gs://staging-quorvium-client`) and `VITE_BASE_PATH` (set to `/staging-quorvium-client/`) so Vite emits the correct asset URLs.
+   Upload the `client/dist` build with `gsutil -m rsync -r client/dist gs://staging-quorvium-client`. The CI workflow expects GitHub environment secrets named `STAGING_BUCKET` (`gs://staging-quorvium-client`) and `VITE_BASE_PATH` (use `./` for Cloud Storage hosting) so Vite emits the correct asset URLs.
 6. Initialize the workspace:
    ```sh
    terraform init
