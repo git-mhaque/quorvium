@@ -3,9 +3,11 @@ import { defineConfig, loadEnv } from 'vite';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
+  const basePath = env.VITE_BASE_PATH ?? process.env.VITE_BASE_PATH ?? './';
 
   return {
     plugins: [react()],
+    base: basePath,
     server: {
       port: Number(env.VITE_DEV_SERVER_PORT ?? 5173)
     },
