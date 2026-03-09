@@ -55,6 +55,6 @@ The exchange of Google authorization codes happens in `server/src/routes/auth.ts
 
 - `client/` – React UI, Google auth, board canvas, Socket.IO client
 - `server/` – Express API, Google token verification, Socket.IO hub
-- `spec.md` – Canonical product requirements
+- `docs/spec.md` – Canonical product requirements
 - `docs/` – Supporting documentation (legacy specs, diagrams, notes)
 - `AGENTS.md` – Contributor workflow guide
