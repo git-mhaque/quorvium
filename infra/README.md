@@ -27,3 +27,11 @@ This directory contains Terraform configuration that provisions the minimal prod
 - The Google OAuth client secret resource only ensures the secret exists. Publish the real value with `gcloud secrets versions add google-oauth-client-secret --data-file=secret.json`.
 - `DATA_DIR` defaults to `/tmp/quorvium-data` on Cloud Run, which is ephemeral. Data resets whenever revisions roll or instances restart—acceptable for light testing but not production.
 - Remote state (GCS bucket + locking) is not yet configured; add this before running in a shared environment.
+- Artifact Registry repositories are not created automatically. Before running the CI workflow or Terraform apply, create the Docker repository referenced by `cloud_run_image`, for example:
+  ```sh
+  gcloud artifacts repositories create quorvium-repo \
+    --project=quorvium \
+    --repository-format=docker \
+    --location=australia-southeast1
+  ```
+  Ensure the GitHub deployer service account has `roles/artifactregistry.writer` on the project or repository.
