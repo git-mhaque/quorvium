@@ -8,23 +8,37 @@ This directory contains Terraform configuration that provisions the minimal prod
 ## Getting Started
 
 1. Install Terraform `>= 1.6.0` and authenticate with Google Cloud (`gcloud auth application-default login`).
-2. Copy `terraform.tfvars.example` to `terraform.tfvars` and fill in project specific values.
-3. Initialize the workspace:
+2. Create the Artifact Registry repository referenced by `cloud_run_image` (only once per project):
+   ```sh
+   gcloud artifacts repositories create quorvium-repo \
+     --project=quorvium \
+     --repository-format=docker \
+     --location=australia-southeast1
+   ```
+   Grant the GitHub deployer service account `roles/artifactregistry.writer`.
+3. Copy `terraform.tfvars.example` to `terraform.tfvars` and fill in project specific values. Use a pinned image digest (e.g., `...@sha256:...`) once CI publishes an image.
+4. Publish the Google OAuth client secret material so Cloud Run can resolve it at runtime:
+   ```sh
+   gcloud secrets versions add google-oauth-client-secret-staging \
+     --project=quorvium \
+     --data-file=client-secret.json
+   ```
+5. Initialize the workspace:
    ```sh
    terraform init
    ```
-4. Review the execution plan:
+6. Review the execution plan:
    ```sh
    terraform plan
    ```
-5. Apply the configuration once the plan looks correct:
+7. Apply the configuration once the plan looks correct:
    ```sh
    terraform apply
    ```
 
 ## Notes
 
-- The Google OAuth client secret resource only ensures the secret exists. Publish the real value with `gcloud secrets versions add google-oauth-client-secret --data-file=secret.json`.
+- The Google OAuth client secret resource only ensures the secret exists. Publish at least one secret version (see step 4 above) before applying Terraform; otherwise Cloud Run fails with `secret ... versions/latest was not found`.
 - `DATA_DIR` defaults to `/tmp/quorvium-data` on Cloud Run, which is ephemeral. Data resets whenever revisions roll or instances restart—acceptable for light testing but not production.
 - Remote state (GCS bucket + locking) is not yet configured; add this before running in a shared environment.
 - Artifact Registry repositories are not created automatically. Before running the CI workflow or Terraform apply, create the Docker repository referenced by `cloud_run_image`, for example:
