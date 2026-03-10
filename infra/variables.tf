@@ -22,7 +22,7 @@ variable "service_name" {
 }
 
 variable "cloud_run_image" {
-  description = "Container image to deploy on Cloud Run."
+  description = "Bootstrap container image used when Terraform creates the Cloud Run service for the first time."
   type        = string
 }
 
@@ -51,16 +51,19 @@ variable "oauth_client_secret_secret_id" {
 }
 
 variable "google_client_id" {
-  description = "Google OAuth client ID to expose to the application."
+  description = "Deprecated: runtime value is now set by the GitHub Actions deploy workflow."
   type        = string
+  default     = ""
 }
 
 variable "google_redirect_uri" {
-  description = "Google OAuth redirect URI configured for the application."
+  description = "Deprecated: runtime value is now set by the GitHub Actions deploy workflow."
   type        = string
+  default     = ""
 }
 
 variable "client_origin" {
-  description = "Allowed client origin for CORS."
+  description = "Deprecated: runtime value is now set by the GitHub Actions deploy workflow."
   type        = string
+  default     = ""
 }

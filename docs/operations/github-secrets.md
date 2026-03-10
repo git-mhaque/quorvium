@@ -18,8 +18,8 @@ Quorvium uses GitHub environments to isolate staging and production deployment c
 | `GCP_SA_KEY` | JSON key for the deployer service account with deploy + Secret Manager access. | Google Cloud IAM | Grant `roles/run.admin` and `roles/secretmanager.secretAccessor`. |
 | `CLOUD_RUN_SERVICE` | Target Cloud Run service name. | Terraform output `cloud_run_service_name` | e.g., `quorvium-api-staging`. |
 | `ARTIFACT_REGISTRY_REPO` | Repository path for container images. | Artifact Registry | Format: `us-central1-docker.pkg.dev/quorvium-staging/api`. |
-| `GOOGLE_CLIENT_ID` | OAuth client ID used by the API. | Terraform variable `google_client_id` / Google OAuth credentials | Should align with Vite staging origin. |
-| `GOOGLE_CLIENT_SECRET` | OAuth client secret. | Secret Manager `google-oauth-client-secret` | Rotate quarterly with Secret Rotation Playbook. |
+| `GOOGLE_CLIENT_ID` | OAuth client ID used by the API. | Google OAuth credentials | Used by the API deploy job (`gcloud run deploy --set-env-vars`). |
+| `GOOGLE_CLIENT_SECRET_SECRET_ID` | Secret Manager secret ID containing OAuth client secret. | Secret Manager | Example: `google-oauth-client-secret-staging`; deploy job binds `GOOGLE_CLIENT_SECRET` from `latest`. |
 | `GOOGLE_REDIRECT_URI` | OAuth redirect for staging Cloud Run domain. | Application config | e.g., `https://staging.quorvium.dev/oauth/callback`. |
 | `CLIENT_ORIGIN` | Frontend origin allowed by CORS. | Vite deployment config | e.g., `https://staging.quorvium.dev`. |
 | `VITE_API_BASE_URL` | API base URL injected into client build. | Cloud Run URL | Example: `https://quorvium-api-staging-a4nw.run.app`. |
@@ -37,8 +37,8 @@ Quorvium uses GitHub environments to isolate staging and production deployment c
 | `GCP_SA_KEY` | JSON key for production deployer service account. | Google Cloud IAM | Assign least privilege + audit key rotation monthly. |
 | `CLOUD_RUN_SERVICE` | Production Cloud Run service name. | Terraform output | e.g., `quorvium-api-production`. |
 | `ARTIFACT_REGISTRY_REPO` | Production Artifact Registry repository. | Artifact Registry | Format: `us-central1-docker.pkg.dev/quorvium-prod/api`. |
-| `GOOGLE_CLIENT_ID` | Production OAuth client ID. | Terraform variable `google_client_id` / Google OAuth credentials | Created in production OAuth consent screen. |
-| `GOOGLE_CLIENT_SECRET` | Production OAuth client secret. | Secret Manager | Rotate with 24-hour communication to customers. |
+| `GOOGLE_CLIENT_ID` | Production OAuth client ID. | Google OAuth credentials | Used by the API deploy job (`gcloud run deploy --set-env-vars`). |
+| `GOOGLE_CLIENT_SECRET_SECRET_ID` | Secret Manager secret ID containing production OAuth client secret. | Secret Manager | Example: `google-oauth-client-secret-production`; deploy job binds `GOOGLE_CLIENT_SECRET` from `latest`. |
 | `GOOGLE_REDIRECT_URI` | Production redirect URI. | Application config | e.g., `https://app.quorvium.com/oauth/callback`. |
 | `CLIENT_ORIGIN` | Production frontend origin. | DNS + CDN config | e.g., `https://app.quorvium.com`. |
 | `VITE_API_BASE_URL` | Production API base for client. | Cloud Run URL or custom domain | Example: `https://api.quorvium.com`. |
@@ -50,5 +50,5 @@ Quorvium uses GitHub environments to isolate staging and production deployment c
 ## Next Steps
 
 - Automate diff checks that compare Terraform outputs with GitHub secret values during pipeline runs.
-- When deployment workflows are added, reference these secrets explicitly in `.github/workflows/` with environment protection rules (required reviewers, manual approval).
+- Keep `.github/workflows/ci.yml` in sync with this map; the staging Cloud Run deploy job now reads project/region/service plus runtime OAuth and CORS settings from the `staging` environment.
 - Document rotation history and owners in `docs/operations/ops-log.md`.

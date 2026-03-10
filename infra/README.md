@@ -2,7 +2,7 @@
 
 This directory contains Terraform configuration that provisions the minimal production footprint for Quorvium while the API still relies on file-backed storage:
 
-- Cloud Run (fully managed) for the Express API container.
+- Cloud Run (fully managed) service scaffolding for the Express API container.
 - Secret Manager for managing Google OAuth client secrets consumed at runtime.
 
 ## Getting Started
@@ -16,7 +16,7 @@ This directory contains Terraform configuration that provisions the minimal prod
      --location=australia-southeast1
    ```
    Grant the GitHub deployer service account `roles/artifactregistry.writer`.
-3. Copy `terraform.tfvars.example` to `terraform.tfvars` and fill in project specific values. Use a pinned image digest (e.g., `...@sha256:...`) once CI publishes an image.
+3. Copy `terraform.tfvars.example` to `terraform.tfvars` and fill in project specific values. `cloud_run_image` is only a bootstrap image used when Terraform creates the service for the first time.
 4. Publish the Google OAuth client secret material so Cloud Run can resolve it at runtime:
    ```sh
    gcloud secrets versions add google-oauth-client-secret-staging \
@@ -40,22 +40,26 @@ This directory contains Terraform configuration that provisions the minimal prod
    gsutil iam ch allUsers:objectViewer gs://staging-quorvium-client
    ```
    Upload the `client/dist` build with `gsutil -m rsync -r client/dist gs://staging-quorvium-client`. The CI workflow expects GitHub environment secrets named `STAGING_BUCKET` (`gs://staging-quorvium-client`) and `VITE_BASE_PATH` (use `./` for Cloud Storage hosting) so Vite emits the correct asset URLs.
-6. Initialize the workspace:
+6. In the GitHub `staging` environment, configure Cloud Run deploy settings used by `.github/workflows/ci.yml`: `GCP_PROJECT_ID`, `GCP_REGION`, `CLOUD_RUN_SERVICE`, `CLIENT_ORIGIN`, `GOOGLE_CLIENT_ID`, `GOOGLE_REDIRECT_URI`, and `GOOGLE_CLIENT_SECRET_SECRET_ID`.
+7. Initialize the workspace:
    ```sh
    terraform init
    ```
-7. Review the execution plan:
+8. Review the execution plan:
    ```sh
    terraform plan
    ```
-8. Apply the configuration once the plan looks correct:
+9. Apply the configuration once the plan looks correct:
    ```sh
    terraform apply
    ```
+10. Deploy revisions by pushing to `main`. The CI workflow builds the container, pushes it to Artifact Registry, and runs `gcloud run deploy` using the pushed digest.
 
 ## Notes
 
 - The Google OAuth client secret resource only ensures the secret exists. Publish at least one secret version (see step 4 above) before applying Terraform; otherwise Cloud Run fails with `secret ... versions/latest was not found`.
+- Terraform ignores Cloud Run container image drift (`template[0].containers[0].image`) so workflow-driven deploys are not reverted on later `terraform apply` runs.
+- Terraform no longer manages Cloud Run runtime environment variables or secret bindings; those are set in the deploy workflow.
 - `DATA_DIR` defaults to `/tmp/quorvium-data` on Cloud Run, which is ephemeral. Data resets whenever revisions roll or instances restart—acceptable for light testing but not production.
 - Remote state (GCS bucket + locking) is not yet configured; add this before running in a shared environment.
 - Artifact Registry repositories are not created automatically. Before running the CI workflow or Terraform apply, create the Docker repository referenced by `cloud_run_image`, for example:
