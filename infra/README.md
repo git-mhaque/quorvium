@@ -53,7 +53,7 @@ This directory contains Terraform configuration that provisions the minimal prod
    ```sh
    terraform apply
    ```
-10. Deploy revisions by pushing to `main`. The CI workflow builds the container, pushes it to Artifact Registry, and runs `gcloud run deploy` using the pushed digest.
+10. Deploy revisions by pushing to `main`. The CI workflow builds the container, pushes it to Artifact Registry, and runs `gcloud run deploy` using the commit-SHA image tag.
 
 ## Notes
 

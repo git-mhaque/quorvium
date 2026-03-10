@@ -105,7 +105,7 @@ jobs:
       GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
       GCP_REGION: ${{ secrets.GCP_REGION }}
       CLOUD_RUN_SERVICE: ${{ secrets.CLOUD_RUN_SERVICE }}
-      IMAGE_DIGEST: ${{ needs.docker-publish.outputs.image_digest }}
+      ARTIFACT_REGISTRY_REPO: ${{ secrets.ARTIFACT_REGISTRY_REPO }}
       CLIENT_ORIGIN: ${{ secrets.CLIENT_ORIGIN }}
       GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
       GOOGLE_REDIRECT_URI: ${{ secrets.GOOGLE_REDIRECT_URI }}
@@ -121,7 +121,7 @@ jobs:
 
       - name: Validate deploy inputs
         run: |
-          for key in GCP_PROJECT_ID GCP_REGION CLOUD_RUN_SERVICE IMAGE_DIGEST CLIENT_ORIGIN GOOGLE_CLIENT_ID GOOGLE_REDIRECT_URI GOOGLE_CLIENT_SECRET_SECRET_ID; do
+          for key in GCP_PROJECT_ID GCP_REGION CLOUD_RUN_SERVICE ARTIFACT_REGISTRY_REPO CLIENT_ORIGIN GOOGLE_CLIENT_ID GOOGLE_REDIRECT_URI GOOGLE_CLIENT_SECRET_SECRET_ID; do
             if [ -z "${!key}" ]; then
               echo "${key} secret/output is required" >&2
               exit 1
@@ -130,11 +130,12 @@ jobs:
 
       - name: Deploy API revision to Cloud Run
         run: |
+          IMAGE_URI="${ARTIFACT_REGISTRY_REPO}:${GITHUB_SHA}"
           gcloud run deploy "${CLOUD_RUN_SERVICE}" \
             --project="${GCP_PROJECT_ID}" \
             --region="${GCP_REGION}" \
             --platform=managed \
-            --image="${IMAGE_DIGEST}" \
+            --image="${IMAGE_URI}" \
             --set-env-vars="NODE_ENV=production,DATA_DIR=/tmp/quorvium-data,CLIENT_ORIGIN=${CLIENT_ORIGIN},GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID},GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI}" \
             --set-secrets="GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET_SECRET_ID}:latest" \
             --quiet
