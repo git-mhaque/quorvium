@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useGoogleLogin } from '@react-oauth/google';
 
 import { createBoard, deleteBoard as deleteBoardRequest, fetchBoardsByOwner } from '../lib/api';
+import { buildBoardUrl } from '../lib/boardUrl';
 import { env } from '../env';
 import { useAuth } from '../state/auth';
 import type { Board } from '../types';
@@ -23,24 +24,6 @@ export function HomePage() {
   const [pendingDeleteBoard, setPendingDeleteBoard] = useState<Board | null>(null);
   const isAuthenticatedCreator = Boolean(user && user.isGuest !== true);
   const [avatarErrored, setAvatarErrored] = useState(false);
-
-  const getBoardShareUrl = useCallback((boardId: string) => {
-    if (typeof window === 'undefined') {
-      return `/boards/${boardId}`;
-    }
-
-    if (env.routerMode === 'hash') {
-      const url = new URL(window.location.href);
-      url.search = '';
-      if (!url.pathname || url.pathname === '/') {
-        url.pathname = '/index.html';
-      }
-      url.hash = `/boards/${boardId}`;
-      return url.toString();
-    }
-
-    return `${window.location.origin}/boards/${boardId}`;
-  }, []);
 
   const refreshBoards = useCallback(async () => {
     if (!user || user.isGuest) {
@@ -75,7 +58,7 @@ export function HomePage() {
 
   const handleCopyBoardLink = useCallback(
     async (boardId: string) => {
-      const shareUrl = getBoardShareUrl(boardId);
+      const shareUrl = buildBoardUrl(boardId);
       try {
         if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
           await navigator.clipboard.writeText(shareUrl);
@@ -100,7 +83,7 @@ export function HomePage() {
         );
       }
     },
-    [getBoardShareUrl]
+    []
   );
 
   const handleDeleteBoard = useCallback(
@@ -517,15 +500,15 @@ export function HomePage() {
                               borderBottom: '1px solid rgba(148,163,184,0.1)'
                             }}
                           >
-                            <a
-                              href={getBoardShareUrl(board.id)}
+                            <Link
+                              to={`/boards/${board.id}`}
                               style={{
                                 color: '#38bdf8',
                                 fontWeight: 600
                               }}
                             >
                               Join board
-                            </a>
+                            </Link>
                           </td>
                           <td
                             style={{

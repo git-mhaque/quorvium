@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 
 import { BoardCanvas } from '../components/BoardCanvas';
 import { fetchBoard } from '../lib/api';
+import { buildBoardUrl } from '../lib/boardUrl';
 import { createBoardSocket } from '../lib/socket';
 import type { BoardSocket } from '../lib/socket';
 import { useAuth } from '../state/auth';
@@ -23,8 +24,7 @@ export function BoardPage() {
     if (!boardId) {
       return '';
     }
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    return `${origin}/boards/${boardId}`;
+    return buildBoardUrl(boardId);
   }, [boardId]);
 
   useEffect(() => {
