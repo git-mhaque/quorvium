@@ -63,12 +63,27 @@ This directory contains Terraform configuration that provisions the minimal prod
    terraform apply
    ```
 10. Deploy revisions by pushing to `main`. The CI workflow builds the container, pushes it to Artifact Registry, and runs `gcloud run deploy` using the commit-SHA image tag.
+11. Smoke test the staging API after deploy:
+   ```sh
+   PROJECT_ID="quorvium"
+   REGION="australia-southeast1"
+   SERVICE="quorvium-api-staging"
+
+   API_URL="$(gcloud run services describe "$SERVICE" \
+     --project "$PROJECT_ID" \
+     --region "$REGION" \
+     --format='value(status.url)')"
+
+   curl -i "${API_URL}/api/boards?ownerId=smoke-test"
+   ```
+   Expect `HTTP/2 200` with a JSON payload (for example `{"boards":[]}`).
 
 ## Notes
 
 - The Google OAuth client secret resource only ensures the secret exists. Publish at least one secret version (see step 4 above) before applying Terraform; otherwise Cloud Run fails with `secret ... versions/latest was not found`.
 - Terraform ignores Cloud Run container image drift (`template[0].containers[0].image`) so workflow-driven deploys are not reverted on later `terraform apply` runs.
 - Terraform no longer manages Cloud Run runtime environment variables or secret bindings; those are set in the deploy workflow.
+- Prefer `/api/boards?ownerId=smoke-test` for a basic health check. `/healthz` can return a platform-level 404 on Cloud Run even when the service is healthy.
 - `DATA_DIR` defaults to `/tmp/quorvium-data` on Cloud Run, which is ephemeral. Data resets whenever revisions roll or instances restart—acceptable for light testing but not production.
 - Remote state (GCS bucket + locking) is not yet configured; add this before running in a shared environment.
 - Artifact Registry repositories are not created automatically. Before running the CI workflow or Terraform apply, create the Docker repository referenced by `cloud_run_image`, for example:
