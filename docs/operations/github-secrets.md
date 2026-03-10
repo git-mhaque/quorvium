@@ -28,6 +28,29 @@ Quorvium uses GitHub environments to isolate staging and production deployment c
 | `VITE_BASE_PATH` | Base path for Vite asset URLs. | Vite config | Use `./` for Cloud Storage static hosting. |
 | `STAGING_BUCKET` | Google Cloud Storage bucket URI for static client hosting. | Cloud Storage (`gs://...`) | Example: `gs://staging-quorvium-client`. |
 
+### Known-Good Staging OAuth Config (March 10, 2026)
+
+Current verified staging app host:
+
+- `https://staging-quorvium-client.storage.googleapis.com/index.html`
+
+GitHub `staging` environment values that worked together:
+
+- `CLIENT_ORIGIN=https://staging-quorvium-client.storage.googleapis.com`
+- `GOOGLE_REDIRECT_URI=https://staging-quorvium-client.storage.googleapis.com`
+- `VITE_GOOGLE_REDIRECT_URI=https://staging-quorvium-client.storage.googleapis.com`
+- `VITE_API_BASE_URL=https://quorvium-api-staging-bnr4ohmdsa-ts.a.run.app`
+
+Google OAuth client settings that matched this deployment:
+
+- Authorized JavaScript origin: `https://staging-quorvium-client.storage.googleapis.com`
+- Authorized redirect URI: `https://staging-quorvium-client.storage.googleapis.com/`
+
+Notes:
+
+- The raw bucket URL (`https://storage.googleapis.com/staging-quorvium-client/index.html`) uses a different origin and can cause OAuth/CORS mismatch.
+- Ensure Secret Manager value for `google-oauth-client-secret-staging` is the raw `client_secret` string, not full JSON.
+
 ## Production Environment (`production`)
 
 | Secret Name | Description | Source of Truth | Notes |
