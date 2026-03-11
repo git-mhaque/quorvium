@@ -9,15 +9,41 @@ Quorvium uses GitHub environments to isolate staging and production deployment c
 - Values that also exist in Google Secret Manager should be rotated there first; update GitHub secrets immediately afterward.
 - Use short-lived JSON service account keys (`gcloud iam service-accounts keys create`) for automation and rotate quarterly.
 
+## One-Command Bootstrap (Staging, Bucket-Style Hosting)
+
+Use the helper script to populate all required staging + repository secrets in one run:
+
+```sh
+bash docs/operations/scripts/populate-staging-github-secrets.sh
+```
+
+Optional flags:
+
+```sh
+# Target a specific repo slug (instead of current local repo)
+bash docs/operations/scripts/populate-staging-github-secrets.sh --repo owner/repo
+
+# Preview commands without writing secrets
+bash docs/operations/scripts/populate-staging-github-secrets.sh --dry-run
+```
+
+Script behavior:
+
+- Creates a new service account key for `quorvium-api-staging@quorvium.iam.gserviceaccount.com` and sets repo secret `GCP_SA_KEY`.
+- Sets repo secret `ARTIFACT_REGISTRY_REPO=australia-southeast1-docker.pkg.dev/quorvium/quorvium-repo/quorvium-api`.
+- Sets all required `staging` environment secrets for the current bucket-style deployment.
+- Normalizes `STAGING_BUCKET` to `gs://...` because CI requires that prefix.
+- Sets `VITE_ROUTER_MODE=hash` (the CI/workflow key name is `VITE_ROUTER_MODE`).
+
 ## Staging Environment (`staging`)
 
 | Secret Name | Description | Source of Truth | Notes |
 | --- | --- | --- | --- |
-| `GCP_PROJECT_ID` | Sandbox project ID hosting staging resources. | Terraform remote state / infra repo | Example: `quorvium-staging` |
-| `GCP_REGION` | Region for Cloud Run resources. | Terraform variables | Must match `terraform.tfvars` (`us-central1`). |
+| `GCP_PROJECT_ID` | Sandbox project ID hosting staging resources. | Terraform remote state / infra repo | Example: `quorvium` |
+| `GCP_REGION` | Region for Cloud Run resources. | Terraform variables | Must match deployment region (`australia-southeast1`). |
 | `GCP_SA_KEY` | JSON key for the deployer service account with deploy + Secret Manager access. | Google Cloud IAM | Grant `roles/run.admin` and `roles/secretmanager.secretAccessor`. |
 | `CLOUD_RUN_SERVICE` | Target Cloud Run service name. | Terraform output `cloud_run_service_name` | e.g., `quorvium-api-staging`. |
-| `ARTIFACT_REGISTRY_REPO` | Repository path for container images. | Artifact Registry | Format: `us-central1-docker.pkg.dev/quorvium-staging/api`. |
+| `ARTIFACT_REGISTRY_REPO` | Repository path for container images. | Artifact Registry | Format: `australia-southeast1-docker.pkg.dev/quorvium/quorvium-repo/quorvium-api`. |
 | `GOOGLE_CLIENT_ID` | OAuth client ID used by the API. | Google OAuth credentials | Used by the API deploy job (`gcloud run deploy --set-env-vars`). |
 | `GOOGLE_CLIENT_SECRET_SECRET_ID` | Secret Manager secret ID containing OAuth client secret. | Secret Manager | Example: `google-oauth-client-secret-staging`; deploy job binds `GOOGLE_CLIENT_SECRET` from `latest`. |
 | `GOOGLE_REDIRECT_URI` | OAuth redirect for staging Cloud Run domain. | Application config | e.g., `https://staging.quorvium.dev/oauth/callback`. |
